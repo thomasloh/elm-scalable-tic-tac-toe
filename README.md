@@ -1,1 +1,1 @@
-## Scalable Tic-Tac-Toe! [Demo](https://dist-mxlcoraqrc.now.sh/)
+## Scalable Tic-Tac-Toe! [Demo](https://dist-dreipwlmfi.now.sh/)
