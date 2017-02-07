@@ -1,10 +1,11 @@
 module App exposing (..)
 
-import Html exposing (Html, text, div, input, button, span, h3)
+import Utils exposing (..)
+import Styles exposing (..)
+import Html exposing (Html, text, div, input, button, span, h3, h5, a)
 import Html.Attributes exposing (..)
 import Html.Events exposing (onInput, onClick)
-import List exposing (length, filter, filterMap, indexedMap, drop, take, map, range, head, tail, foldl, foldr, member, map, sortBy)
-import Task
+import List exposing (length, filter, filterMap, indexedMap, drop, take, range, head, tail, foldl, foldr, member, sortBy)
 import String
 
 
@@ -55,59 +56,6 @@ reset x =
 
 init =
     ( reset getDefaultScale, Cmd.none )
-
-
-send msg =
-    Task.succeed msg
-        |> Task.perform identity
-
-
-
--- Matrix functions
-
-
-matrixify size list =
-    case list of
-        [] ->
-            []
-
-        _ ->
-            (take size list) :: (matrixify size (drop size list))
-
-
-transpose matrix =
-    case matrix of
-        [] ->
-            []
-
-        [] :: xss ->
-            transpose xss
-
-        (x :: xs) :: xss ->
-            let
-                heads =
-                    filterMap head xss
-
-                tails =
-                    filterMap tail xss
-            in
-                (x :: heads) :: (transpose (xs :: tails))
-
-
-diagRight matrix =
-    let
-        f row c =
-            c ++ [ (Maybe.withDefault ( -1, "" ) (head (drop (length c) row))) ]
-    in
-        [ foldl f [] matrix ]
-
-
-diagLeft matrix =
-    let
-        f row c =
-            [ (Maybe.withDefault ( -1, "" ) (head (drop (length c) row))) ] ++ c
-    in
-        [ foldr f [] matrix ]
 
 
 
@@ -245,20 +193,12 @@ update msg model =
 
                             -- Find AI winning move
                             aIWinningMoveCondition rows =
-                                let
-                                    f row =
-                                        (findNumOfChar "x" row) == (scale - 1)
-                                in
-                                    filter f rows
+                                filter (\row -> (findNumOfChar "x" row) == (scale - 1)) rows
 
                             -- If yes, win it!
                             -- If none, find Player's winning move
                             playerWinningMoveCondition rows =
-                                let
-                                    f row =
-                                        (findNumOfChar "o" row) == (scale - 1)
-                                in
-                                    filter f rows
+                                filter (\row -> (findNumOfChar "o" row) == (scale - 1)) rows
 
                             -- If yes, block it!
                             -- If none, decide AI's next move
@@ -289,12 +229,25 @@ update msg model =
                                             sortBy sorter (List.reverse rows)
 
                                     default =
-                                        case sorted of
-                                            [] ->
-                                                []
+                                        let
+                                            rest =
+                                                case sorted of
+                                                    [] ->
+                                                        []
 
-                                            x :: xs ->
-                                                [ x ]
+                                                    x :: xs ->
+                                                        [ x ]
+                                        in
+                                            case (findCharAt center) of
+                                                "o" ->
+                                                    -- Grab corner
+                                                    if (member ( scale, "" ) currentBoard) then
+                                                        [ [ ( scale, "" ) ] ]
+                                                    else
+                                                        rest
+
+                                                _ ->
+                                                    rest
                                 in
                                     case (isIndexEmpty center) of
                                         True ->
@@ -308,16 +261,7 @@ update msg model =
                                                             [ [ ( scale, "" ) ] ]
 
                                                         False ->
-                                                            case (findCharAt center) of
-                                                                "o" ->
-                                                                    -- Grab corner
-                                                                    if (member ( scale, "" ) currentBoard) then
-                                                                        [ [ ( scale, "" ) ] ]
-                                                                    else
-                                                                        default
-
-                                                                _ ->
-                                                                    default
+                                                            default
 
                                                 "x" ->
                                                     case (isIndexEmpty (scale - 1)) of
@@ -325,16 +269,7 @@ update msg model =
                                                             [ [ ( (scale - 1), "" ) ] ]
 
                                                         False ->
-                                                            case (findCharAt center) of
-                                                                "o" ->
-                                                                    -- Grab corner
-                                                                    if (isIndexEmpty scale) then
-                                                                        [ [ ( scale, "" ) ] ]
-                                                                    else
-                                                                        default
-
-                                                                _ ->
-                                                                    default
+                                                            default
 
                                                 _ ->
                                                     default
@@ -406,6 +341,7 @@ viewPanel { scale } =
     in
         div [ stylePanel ]
             [ h3 [] [ text "Scalable Tic-Tac-Toe!" ]
+            , h5 [] [ a [ href "https://github.com/thomasloh/elm-scalable-tic-tac-toe", target "_blank" ] [ text "[Source]" ] ]
             , div []
                 [ span [ styleLabel ] [ text "Scale:" ]
                 , input [ type_ "number", value (toString scale), onInput OnScaleChange, Html.Attributes.max "20", styleInput ] []
@@ -446,66 +382,3 @@ viewBoardRowBox model ( i, board ) =
     div [ (styleRowBox model), onClick (UserMove i) ]
         [ text board
         ]
-
-
-
--- STYLES
-
-
-styleRoot =
-    style
-        [ ( "display", "flex" )
-        , ( "align-items", "center" )
-        , ( "justify-content", "center" )
-        , ( "flex-direction", "column" )
-        , ( "padding", "30px 30px" )
-        ]
-
-
-stylePanel =
-    style
-        [ ( "flex", "1" )
-        , ( "align-self", "flex-start" )
-        , ( "text-align", "left" )
-        ]
-
-
-styleBoard { padding, size, scale } =
-    let
-        maxWidth =
-            (toString ((size + padding * 2) * scale)) ++ "px"
-    in
-        style
-            [ ( "display", "flex" )
-            , ( "flex-wrap", "wrap" )
-            , ( "flex-direction", "row" )
-            , ( "align-items", "center" )
-            , ( "max-width", maxWidth )
-            , ( "background", "orange" )
-            , ( "border-radius", "4px" )
-            , ( "justify-content", "center" )
-            , ( "flex", "1" )
-            ]
-
-
-styleRowBox { padding, size } =
-    let
-        w =
-            (toString size) ++ "px"
-
-        h =
-            (toString size) ++ "px"
-
-        m =
-            (toString padding) ++ "px"
-    in
-        style
-            [ ( "background", "yellow" )
-            , ( "display", "flex" )
-            , ( "align-items", "center" )
-            , ( "justify-content", "center" )
-            , ( "border-radius", "4px" )
-            , ( "margin", m )
-            , ( "width", w )
-            , ( "height", h )
-            ]
