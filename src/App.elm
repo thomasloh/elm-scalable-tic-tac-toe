@@ -148,6 +148,25 @@ update msg model =
                     (length (filter (\( _, x ) -> x == "") state)) == 0
             in
                 ( hasNoMoves, state )
+
+        findNumOfChar char r =
+            let
+                numOfChar char ( _, y ) =
+                    y == char
+            in
+                length (filter (numOfChar char) r)
+
+        isIndexEmpty index =
+            member ( index, "" ) currentBoard
+
+        findCharAt index =
+            filter (\( i, x ) -> i == index) currentBoard
+                |> List.map (\( i, x ) -> x)
+                |> List.head
+                |> Maybe.withDefault ""
+
+        rowHasChar char row =
+            (findNumOfChar char row) > 0
     in
         case winner of
             Just _ ->
@@ -168,29 +187,15 @@ update msg model =
                             ( hasNoMoves, board ) =
                                 updateBoard "o" index
                         in
-                            ( { model | currentBoard = board, hasNoMoves = hasNoMoves }, send AIMove )
+                            case (findCharAt index) of
+                                "" ->
+                                    ( { model | currentBoard = board, hasNoMoves = hasNoMoves }, send AIMove )
+
+                                _ ->
+                                    ( model, Cmd.none )
 
                     AIMove ->
                         let
-                            findNumOfChar char r =
-                                let
-                                    numOfChar char ( _, y ) =
-                                        y == char
-                                in
-                                    length (filter (numOfChar char) r)
-
-                            isIndexEmpty index =
-                                member ( index, "" ) currentBoard
-
-                            findCharAt index =
-                                filter (\( i, x ) -> i == index) currentBoard
-                                    |> List.map (\( i, x ) -> x)
-                                    |> List.head
-                                    |> Maybe.withDefault ""
-
-                            rowHasChar char row =
-                                (findNumOfChar char row) > 0
-
                             -- Find AI winning move
                             aIWinningMoveCondition rows =
                                 filter (\row -> (findNumOfChar "x" row) == (scale - 1)) rows
@@ -256,17 +261,19 @@ update msg model =
                                         False ->
                                             case (findCharAt center) of
                                                 "o" ->
-                                                    case (isIndexEmpty scale) of
-                                                        True ->
-                                                            [ [ ( scale, "" ) ] ]
-
-                                                        False ->
-                                                            default
+                                                    if (isIndexEmpty scale) then
+                                                        [ [ ( scale, "" ) ] ]
+                                                    else if (isIndexEmpty 1) then
+                                                        [ [ ( 1, "" ) ] ]
+                                                    else if (isIndexEmpty (scale * scale)) then
+                                                        [ [ ( scale * scale, "" ) ] ]
+                                                    else
+                                                        default
 
                                                 "x" ->
-                                                    case (isIndexEmpty (scale - 1)) of
+                                                    case (isIndexEmpty (scale * 2)) of
                                                         True ->
-                                                            [ [ ( (scale - 1), "" ) ] ]
+                                                            [ [ ( (scale * 2), "" ) ] ]
 
                                                         False ->
                                                             default
